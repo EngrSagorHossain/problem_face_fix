@@ -1,2 +1,6 @@
 //For getx problem this is temporary solution
 flutter pub global activate  --source=git https://github.com/inyong1/get_cli.git
+
+//for firebase push notification its need to allow permisson form user 
+
+with Firebase.instanc.getPermissionrequest();
