@@ -1,0 +1,12 @@
+//aoi
+const String kDomain = "https://wahid.servesonic.net";
+const String basUrl = "$kDomain/api";
+const String imageUrl = "$kDomain/";
+//Authentication EndPoints
+const String kLoginUrl = "$basUrl/login";
+const String kRegisterUrl = "$basUrl/register";
+
+String kFetchProduct({required int subSubCatId}) =>
+    "$basUrl/subsubcategories/$subSubCatId";
+
+//button
