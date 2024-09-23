@@ -6,3 +6,4 @@ flutter pub add cached_network_image
 flutter pub add cached_network_image
 flutter pub add google_fonts
 dart pub add dio
+flutter pub add image_picker
