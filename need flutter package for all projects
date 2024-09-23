@@ -8,3 +8,4 @@ flutter pub add google_fonts
 dart pub add dio
 flutter pub add image_picker
 flutter pub add streaming_shared_preferences
+flutter pub add persistent_bottom_nav_bar
