@@ -4,3 +4,4 @@ flutter pub add firebase_messaging
 flutter pub add loading_overlay
 flutter pub add cached_network_image
 flutter pub add cached_network_image
+flutter pub add google_fonts
