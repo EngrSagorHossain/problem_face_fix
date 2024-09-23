@@ -1,0 +1,261 @@
+//room list
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:wahidstore/app/modules/messanger/controllers/messanger_controller.dart';
+
+import 'messanger_view.dart';
+
+class MessageListView extends GetView<MessangerController> {
+  const MessageListView({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    Get.put(MessangerController());
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Message List'),
+        centerTitle: true,
+      ),
+      body: StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore.instance.collection('rooms').snapshots(),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          final rooms = snapshot.data!.docs;
+          if (rooms.isEmpty) {
+            return const Center(child: Text('No rooms available.'));
+          }
+
+          return ListView.builder(
+            itemCount: rooms.length,
+            itemBuilder: (context, index) {
+              var room = rooms[index];
+
+              return ListTile(
+                title: Text('Chat With: ${room.id}'), // Display room ID or name
+                subtitle: Text(
+                    'Last message: ${room['lastMessage'] ?? 'No messages yet'}'), // Example field for last message
+                onTap: () {
+                  controller.setRoomId(room.id);
+                  Get.to(
+                    () => const MessangerView(),
+                    arguments: room.id,
+                  );
+                },
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+}
+
+//meesagesent view
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+
+import '../controllers/messanger_controller.dart';
+
+class MessangerView extends GetView<MessangerController> {
+  const MessangerView({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    // Initialize the controller with Get.put and access through `controller`
+    final MessangerController controller = Get.put(MessangerController());
+    TextEditingController messageController = TextEditingController();
+
+    return Scaffold(
+      appBar: AppBar(
+        leading: IconButton(
+          onPressed: () {},
+          icon: const Icon(Icons.menu, size: 40, color: Colors.white),
+        ),
+        actions: [
+          if (controller.isAdmin) ...[
+            IconButton(
+                onPressed: () {},
+                icon: const Icon(Icons.add_call,
+                    size: 40, color: Colors.redAccent)),
+            IconButton(
+                onPressed: () {},
+                icon: const Icon(Icons.video_call,
+                    size: 40, color: Colors.redAccent)),
+          ],
+        ],
+        backgroundColor: Colors.blue,
+        title: const Text('ইনবক্স',
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        centerTitle: true,
+      ),
+      body: Column(
+        children: [
+          // Messages List
+          Expanded(
+            child: StreamBuilder<QuerySnapshot>(
+              stream: controller.fetchMessages(),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                final messages = snapshot.data!.docs;
+
+                return ListView.builder(
+                  padding: const EdgeInsets.all(10.0),
+                  itemCount: messages.length,
+                  itemBuilder: (context, index) {
+                    var message = messages[index];
+                    bool isMe = message['senderId'] == controller.userId;
+
+                    return Align(
+                      alignment:
+                          isMe ? Alignment.centerRight : Alignment.centerLeft,
+                      child: Container(
+                        padding: const EdgeInsets.all(10.0),
+                        margin: const EdgeInsets.symmetric(vertical: 5.0),
+                        decoration: BoxDecoration(
+                          color: isMe ? Colors.blue : Colors.grey.shade300,
+                          borderRadius: BorderRadius.circular(15.0),
+                        ),
+                        child: Text(
+                          message['text'],
+                          style: TextStyle(
+                            color: isMe ? Colors.white : Colors.black,
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+          // Text Input and Send Button (visible to all users or just admin)
+          Container(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 8.0, vertical: 10.0),
+            color: Colors.white,
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: messageController,
+                    decoration: InputDecoration(
+                      hintText: 'Type your message...',
+                      filled: true,
+                      fillColor: Colors.grey.shade200,
+                      contentPadding:
+                          const EdgeInsets.symmetric(horizontal: 15.0),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(25.0),
+                        borderSide:
+                            const BorderSide(color: Colors.red, width: 2.0),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8.0),
+                CircleAvatar(
+                  radius: 25,
+                  backgroundColor: Colors.blue,
+                  child: IconButton(
+                    icon: const Icon(Icons.send, color: Colors.white),
+                    onPressed: () {
+                      if (messageController.text.isNotEmpty) {
+                        controller.sendMessage(messageController.text);
+                        messageController.clear();
+                      }
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+//contoller logic
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:get/get.dart';
+import 'package:wahidstore/app/modules/auth/controllers/auth_controller.dart';
+
+class MessangerController extends GetxController {
+  AuthController authController = Get.find();
+  late String userId = '0'; // Placeholder until the actual user ID is set
+  final String adminId = '1'; // Fixed admin ID for the chat with admin
+
+  final roomId = ''.obs;
+
+  @override
+  void onInit() {
+    super.onInit();
+    // Set userId from the authenticated user's profile
+    userId = authController.profile.value.user!.id.toString();
+    roomId.value = '$adminId$userId';
+  }
+
+  // // Generate roomId using adminId and userId
+  // String get roomId =>
+  //     '$adminId$userId'; // Combines admin and user ID to create roomId
+
+  // Boolean to check if the current user is the admin (you can modify this logic)
+  bool get isAdmin => userId == adminId; // If user is admin, this will be true
+
+  void setRoomId(String roomIds) {
+    roomId.value = roomIds;
+    fetchMessages();
+  }
+
+  // Fetch messages from the room based on roomId
+  Stream<QuerySnapshot> fetchMessages() {
+    final roomRef =
+        FirebaseFirestore.instance.collection('rooms').doc(roomId.value);
+    return roomRef
+        .collection('messages')
+        .orderBy('timestamp', descending: false)
+        .snapshots();
+  }
+
+  // Send a message to the room (either admin or user can send)
+  Future<void> sendMessage(String text) async {
+    final roomRef =
+        FirebaseFirestore.instance.collection('rooms').doc(roomId.value);
+    final messagesRef = roomRef.collection('messages');
+
+    // Add a new message to the messages subcollection
+    await messagesRef.add({
+      'senderId': userId, // The ID of the sender (current user)
+      'text': text, // The message text
+      'username': authController.profile.value.user!.ownerName!,
+      'timestamp': FieldValue.serverTimestamp(), // Timestamp of the message
+    });
+
+    // Check if the room exists before updating the lastMessage
+    DocumentSnapshot roomSnapshot = await roomRef.get();
+    if (roomSnapshot.exists) {
+      // If room exists, update the last message
+      await roomRef.update({
+        'lastMessage': text,
+      });
+    } else {
+      // If room doesn't exist, create the room and set the last message
+      await roomRef.set(
+          {
+            'lastMessage': text,
+            'createdAt': FieldValue.serverTimestamp(),
+          },
+          SetOptions(
+              merge: true)); // Merge ensures you don't overwrite other data
+    }
+  }
+}
+
+
