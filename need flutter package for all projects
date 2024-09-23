@@ -1,0 +1,6 @@
+flutter pub add flutter_spinkit
+flutter pub add firebase_core
+flutter pub add firebase_messaging
+flutter pub add loading_overlay
+flutter pub add cached_network_image
+flutter pub add cached_network_image
